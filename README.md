@@ -187,12 +187,6 @@ but everything it considered and declined, and why. Full cycle snapshots land in
 `state/journal.json` tracks open spreads and remaining contracts, and is reconciled against live
 broker positions on every pass.
 
-## Attribution
-
-Risk design adapted from [FriesTrader](https://github.com/YizhiSong/FriesTrader) (MIT): limits held
-outside the model's reach, loss limits measured against a non-drifting capital base, a human-only
-dry-run to live gate, tiered take-profits, and re-entry locks after a close.
-
 ## Disclosure
 
 Paper trading results are hypothetical and are not indicative of future results. Options carry risk,

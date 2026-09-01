@@ -1,5 +1,5 @@
 {
-  "_comment": "Hard numeric limits. The thesis engine may never override these. Any trade violating a rule here is rejected before it reaches the broker, regardless of how strong the thesis reads. Risk design adapted from FriesTrader (https://github.com/YizhiSong/FriesTrader), MIT licensed.",
+  "_comment": "Hard numeric limits. The thesis engine may never override these. Any trade violating a rule here is rejected before it reaches the broker, regardless of how strong the thesis reads.",
   "account_number": "PA3QBU3CI6Q8",
   "starting_capital_usd": 100000.0,
   "starting_capital_usd_note": "Net deposits minus withdrawals, not live equity. Loss limits are measured against this so the risk budget does not shrink exactly when the account is losing. Update by hand only after a deposit or withdrawal.",
@@ -78,7 +78,7 @@
     "note": "Sector narratives do not turn over in half an hour. A wider interval preserves signal and conserves the metered model budget across a multi-day run."
   },
   "protections": {
-    "_comment": "Time bounded trading locks adapted from freqtrade's protections framework. Each returns a lock with an expiry and a stated reason rather than a bare boolean, so the log says what stopped trading and until when. Locks halt entries only; exits always continue.",
+    "_comment": "Time bounded trading locks. Each returns a lock with an expiry and a stated reason rather than a bare boolean, so the log says what stopped trading and until when. Locks halt entries only; exits always continue.",
     "stoploss_guard": {
       "enabled": true,
       "lookback_hours": 24,
