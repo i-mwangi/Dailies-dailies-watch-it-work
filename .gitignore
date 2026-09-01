@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+state/
+logs/
+*.log
+.DS_Store
+Thumbs.db
+tools/alpaca
+tools/alpaca.exe
+tools/*.zip
+tools/LICENSE
+tools/README.md
