@@ -11,6 +11,7 @@ from .guards import DrawdownGuard, LossLimitGuard, ReentryLock, StopLossGuard
 from .ingest import NewsFeed, bucket_by_sector
 from .llm import FeatherlessClient, LLMUnavailable
 from .market import MarketData, build_vertical_spreads
+from .memory import OutcomeLog, format_memory
 from .monitor import PositionMonitor
 from .risk import PortfolioState, RiskManager
 from .rules import RiskRules, apply_rules, load_rules
@@ -32,13 +33,15 @@ class TradingAgent:
         self.engine = ThesisEngine(settings, self.llm)
         self.market = MarketData(settings)
         self.executor = Executor(settings, rules)
-        self.risk = RiskManager(settings)
+        self.risk = RiskManager(settings, rules.allowed_directions)
         self.lock = ReentryLock(settings, rules)
         self.loss_guard = LossLimitGuard(settings, rules)
         self.stop_guard = StopLossGuard(settings, rules, self.audit)
         self.drawdown_guard = DrawdownGuard(settings, rules)
+        self.outcomes = OutcomeLog(settings)
         self.monitor = PositionMonitor(settings, rules, self.executor,
-                                       self.market, self.audit, self.lock)
+                                       self.market, self.audit, self.lock,
+                                       self.outcomes)
 
     def run_cycle(self, dry_run: bool = False) -> Dict:
         started = datetime.now(timezone.utc)
@@ -108,8 +111,17 @@ class TradingAgent:
             log(f"below {self.settings.min_articles_per_sector} article floor, "
                 f"no model call: {', '.join(skipped)}")
 
+        memory_notes = {}
+        for sector in eligible:
+            recent = self.outcomes.recent_for_sector(sector, limit=5)
+            note = format_memory(sector, recent)
+            if note:
+                memory_notes[sector] = note
+        if memory_notes:
+            log(f"replaying outcomes for: {', '.join(sorted(memory_notes))}")
+
         try:
-            theses = self.engine.analyse_all(eligible)
+            theses = self.engine.analyse_all(eligible, memory_notes)
         except LLMUnavailable as exc:
             message = f"model unavailable, no theses this cycle: {exc}"
             log(message)

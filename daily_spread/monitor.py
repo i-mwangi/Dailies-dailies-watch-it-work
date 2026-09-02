@@ -6,18 +6,32 @@ from .config import Settings
 from .execute import Executor
 from .guards import ReentryLock
 from .market import MarketData
+from .memory import OutcomeLog, outcome_from_trade
 from .rules import RiskRules
 
 
 class PositionMonitor:
     def __init__(self, settings: Settings, rules: RiskRules, executor: Executor,
-                 market: MarketData, audit: AuditLog, lock: ReentryLock):
+                 market: MarketData, audit: AuditLog, lock: ReentryLock,
+                 outcomes: OutcomeLog = None):
+        self.outcomes = outcomes or OutcomeLog(settings)
         self.settings = settings
         self.rules = rules
         self.executor = executor
         self.market = market
         self.audit = audit
         self.lock = lock
+
+    def _record_outcome(self, entry, profit_pct: float, reason: str) -> None:
+        self.outcomes.record(outcome_from_trade(
+            sector=entry.get("sector", "unknown"),
+            underlying=entry.get("underlying", ""),
+            direction=entry.get("direction", ""),
+            conviction=float(entry.get("conviction", 0) or 0),
+            opened_at=entry.get("opened_at", ""),
+            profit_pct=profit_pct,
+            reason=reason,
+        ))
 
     def stop_multiple(self, entry: Dict) -> float:
         if self.rules.stop_mode != "volatility_scaled":
@@ -75,6 +89,7 @@ class PositionMonitor:
             if dte is not None and dte <= self.rules.close_at_dte:
                 if self.executor.close_spread(entry, remaining):
                     self.lock.record_close(underlying, closed_at_gain=profit_pct > 0)
+                    self._record_outcome(entry, profit_pct, "expiry")
                     self.audit.order("live" if self.rules.is_live else "dry_run", "close",
                                      underlying, reason="expiry_guard", dte=dte,
                                      contracts=remaining, profit_pct=round(profit_pct, 4))
@@ -85,6 +100,7 @@ class PositionMonitor:
             if current >= credit * multiple:
                 if self.executor.close_spread(entry, remaining):
                     self.lock.record_close(underlying, closed_at_gain=False)
+                    self._record_outcome(entry, profit_pct, "stop loss")
                     self.audit.order("live" if self.rules.is_live else "dry_run", "close",
                                      underlying, reason="stop_loss", contracts=remaining,
                                      stop_multiple=round(multiple, 3),
@@ -103,6 +119,7 @@ class PositionMonitor:
                         entry["order_id"], tier["gain_pct"], quantity)
                     if quantity >= remaining:
                         self.lock.record_close(underlying, closed_at_gain=True)
+                        self._record_outcome(entry, profit_pct, "take profit")
                     self.audit.order("live" if self.rules.is_live else "dry_run", "close",
                                      underlying, reason="take_profit",
                                      tier=tier["gain_pct"], contracts=quantity,

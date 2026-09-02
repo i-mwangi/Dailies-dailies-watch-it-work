@@ -46,6 +46,7 @@ class RiskRules:
     loss_lock_hours: float
     max_contracts_per_spread: int
     interval_minutes: int
+    allowed_directions: List[str] = field(default_factory=list)
     stoploss_guard: Optional[ProtectionConfig] = None
     max_drawdown: Optional[ProtectionConfig] = None
     tiers: List[ProfitTier] = field(default_factory=list)
@@ -126,6 +127,9 @@ def load_rules(path: Path = RULES_PATH) -> RiskRules:
         loss_lock_hours=float(lock.get("loss_close_lock_hours", 120)),
         max_contracts_per_spread=int(sizing.get("max_contracts_per_spread", 10)),
         interval_minutes=int(data.get("cadence", {}).get("default_interval_minutes", 75)),
+        allowed_directions=[str(x).lower() for x in
+                            data.get("signal", {}).get("allowed_directions",
+                                                       ["bullish", "bearish"])],
         stoploss_guard=stoploss_guard,
         max_drawdown=max_drawdown,
         tiers=tiers,

@@ -14,7 +14,11 @@
     "min_conviction": 0.55,
     "min_articles_per_sector": 4,
     "news_lookback_hours": 18,
-    "min_articles_note": "A sector below this article count gets no model call at all. Thin coverage produced neutral low-conviction theses every time, so the call was spend without signal."
+    "min_articles_note": "A sector below this article count gets no model call at all. Thin coverage produced neutral low-conviction theses every time, so the call was spend without signal.",
+    "allowed_directions": [
+      "bullish"
+    ],
+    "allowed_directions_note": "Directions the agent may act on. Bearish theses were measured at a 31 percent hit rate across 5, 10 and 20 trading day horizons on a 99 observation sample, against a bullish hit rate that tracked the underlying. Bearish entries are disabled on that evidence. Set to [\"bullish\", \"bearish\"] to re-enable."
   },
   "position_sizing": {
     "max_risk_per_trade_pct": 0.02,

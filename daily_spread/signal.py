@@ -63,7 +63,8 @@ class ThesisEngine:
         self.settings = settings
         self.llm = llm or FeatherlessClient(settings)
 
-    def analyse(self, sector: str, articles: List[Article]) -> Optional[Thesis]:
+    def analyse(self, sector: str, articles: List[Article],
+                memory_note: str = "") -> Optional[Thesis]:
         if len(articles) < self.settings.min_articles_per_sector:
             return None
 
@@ -83,8 +84,12 @@ class ThesisEngine:
             f"Traded via: {spec['etf']}\n"
             f"Headlines from the last {self.settings.news_lookback_hours} hours:\n\n"
             + "\n".join(lines)
-            + "\n\nReturn the JSON object."
         )
+
+        if memory_note:
+            user_prompt += f"\n\n{memory_note}"
+
+        user_prompt += "\n\nReturn the JSON object."
 
         try:
             payload = self.llm.complete_json(
@@ -131,10 +136,12 @@ class ThesisEngine:
             article_count=len(articles),
         )
 
-    def analyse_all(self, buckets: Dict[str, List[Article]]) -> List[Thesis]:
+    def analyse_all(self, buckets: Dict[str, List[Article]],
+                    memory_notes: Optional[Dict[str, str]] = None) -> List[Thesis]:
+        notes = memory_notes or {}
         results = []
         for sector, articles in buckets.items():
-            thesis = self.analyse(sector, articles)
+            thesis = self.analyse(sector, articles, notes.get(sector, ""))
             if thesis:
                 results.append(thesis)
         results.sort(key=lambda t: t.conviction, reverse=True)

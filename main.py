@@ -15,6 +15,7 @@ def main() -> None:
     parser.add_argument("--days", type=int, default=30)
     parser.add_argument("--horizon", type=int, default=5)
     parser.add_argument("--step", type=int, default=1)
+    parser.add_argument("--memory", action="store_true")
     args = parser.parse_args()
 
     if args.command == "rules":
@@ -51,10 +52,12 @@ def main() -> None:
         def progress(as_of, count):
             log(f"  {as_of} observations={count}")
 
-        report = runner.run(args.days, args.horizon, args.step, progress=progress)
+        report = runner.run(args.days, args.horizon, args.step, progress=progress,
+                            use_memory=args.memory)
         payload = report.to_dict(agent.settings.min_conviction)
 
-        out = agent.settings.log_dir / f"backtest_{args.days}d_h{args.horizon}.json"
+        suffix = "_mem" if args.memory else ""
+        out = agent.settings.log_dir / f"backtest_{args.days}d_h{args.horizon}{suffix}.json"
         out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
         print(json.dumps({k: v for k, v in payload.items() if k != "observations"}, indent=2))

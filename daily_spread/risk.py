@@ -28,14 +28,17 @@ class PortfolioState:
 
 
 class RiskManager:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, allowed_directions: Optional[List[str]] = None):
         self.settings = settings
+        self.allowed_directions = allowed_directions or ["bullish", "bearish"]
 
     def screen_thesis(self, thesis: Thesis) -> Tuple[bool, List[str]]:
         reasons = []
 
         if not thesis.is_actionable:
             reasons.append(f"direction {thesis.direction} is not tradeable")
+        elif thesis.direction not in self.allowed_directions:
+            reasons.append(f"direction {thesis.direction} disabled by rules")
         if thesis.conviction < self.settings.min_conviction:
             reasons.append(
                 f"conviction {thesis.conviction:.2f} below floor {self.settings.min_conviction:.2f}")

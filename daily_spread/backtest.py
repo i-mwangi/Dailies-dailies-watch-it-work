@@ -12,6 +12,7 @@ from alpaca.data.timeframe import TimeFrame
 from .config import SECTOR_UNIVERSE, Settings, TRADABLE_UNDERLYINGS
 from .ingest import Article, NewsFeed, bucket_by_sector
 from .llm import LLMUnavailable
+from .memory import Outcome, format_memory
 from .signal import Thesis, ThesisEngine
 
 
@@ -27,6 +28,7 @@ class Observation:
     exit_price: float
     forward_return: float
     horizon_days: int
+    resolved_on: str = ""
 
     @property
     def is_hit(self) -> bool:
@@ -246,10 +248,10 @@ class SignalBacktest:
         exit_price = prices[exit_day]
         if entry <= 0:
             return None
-        return entry, exit_price, (exit_price - entry) / entry
+        return entry, exit_price, (exit_price - entry) / entry, exit_day
 
     def run(self, days: int, horizon: int, step_days: int = 1,
-            progress=None) -> BacktestReport:
+            progress=None, use_memory: bool = False) -> BacktestReport:
         report = BacktestReport(horizon_days=horizon)
         skipped: Dict[str, int] = {}
 
@@ -284,12 +286,27 @@ class SignalBacktest:
                     skipped["no_forward_price"] = skipped.get("no_forward_price", 0) + 1
                     continue
 
-                key = self.cache.key(as_of, sector, self.settings.model)
+                note = ""
+                if use_memory:
+                    resolved = [o for o in report.observations
+                                if o.sector == sector and o.resolved_on
+                                and o.resolved_on <= as_of.isoformat()]
+                    resolved.sort(key=lambda o: o.resolved_on)
+                    note = format_memory(sector, [
+                        Outcome(sector=o.sector, underlying=o.underlying,
+                                direction=o.direction, conviction=o.conviction,
+                                opened_at=o.as_of, resolved_at=o.resolved_on,
+                                result="correct" if o.is_hit else "wrong",
+                                detail=f"underlying moved {o.forward_return:+.2%}")
+                        for o in resolved[-5:]])
+
+                tag = self.settings.model + ("|mem" if use_memory else "")
+                key = self.cache.key(as_of, sector, tag)
                 cached = self.cache.get(key)
 
                 if cached is None:
                     try:
-                        thesis = self.engine.analyse(sector, items)
+                        thesis = self.engine.analyse(sector, items, note)
                     except LLMUnavailable:
                         raise
                     if thesis is None:
@@ -298,7 +315,7 @@ class SignalBacktest:
                     cached = thesis.to_dict()
                     self.cache.put(key, cached)
 
-                entry, exit_price, forward = pair
+                entry, exit_price, forward, resolved_on = pair
                 report.observations.append(Observation(
                     as_of=as_of.isoformat(),
                     sector=sector,
@@ -310,6 +327,7 @@ class SignalBacktest:
                     exit_price=round(exit_price, 4),
                     forward_return=round(forward, 6),
                     horizon_days=horizon,
+                    resolved_on=resolved_on.isoformat(),
                 ))
 
             if progress:
