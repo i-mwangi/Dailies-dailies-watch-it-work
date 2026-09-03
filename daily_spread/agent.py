@@ -45,6 +45,7 @@ class TradingAgent:
 
     def run_cycle(self, dry_run: bool = False) -> Dict:
         started = datetime.now(timezone.utc)
+        deadline = time.monotonic() + self.rules.cycle_budget_seconds
         simulate = dry_run or not self.rules.is_live
 
         log(f"cycle start mode={self.rules.mode} simulate={simulate} "
@@ -121,7 +122,7 @@ class TradingAgent:
             log(f"replaying outcomes for: {', '.join(sorted(memory_notes))}")
 
         try:
-            theses = self.engine.analyse_all(eligible, memory_notes)
+            theses = self.engine.analyse_all(eligible, memory_notes, deadline)
         except LLMUnavailable as exc:
             message = f"model unavailable, no theses this cycle: {exc}"
             log(message)
@@ -129,6 +130,11 @@ class TradingAgent:
             summary["llm_unavailable"] = True
             self.audit.write("llm_unavailable", detail=str(exc)[:300])
             return self._finish(summary)
+
+        if len(theses) < len(eligible):
+            log(f"time budget reached, analysed {len(theses)} of {len(eligible)} sectors")
+            summary["actions"].append(
+                f"time budget reached after {len(theses)} of {len(eligible)} sectors")
 
         for thesis in theses:
             log(f"  {thesis.sector:14s} {thesis.direction:8s} conviction={thesis.conviction:.2f}")

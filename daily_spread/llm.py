@@ -53,7 +53,7 @@ class FeatherlessClient:
         }
 
     def complete(self, messages: List[Dict[str, str]], max_tokens: int = 700,
-                 temperature: float = 0.25, retries: int = 3) -> str:
+                 temperature: float = 0.25, retries: int = 2) -> str:
         body = {
             "model": self.settings.model,
             "messages": messages,
@@ -67,7 +67,7 @@ class FeatherlessClient:
         for _ in range(retries):
             try:
                 response = requests.post(self.endpoint, headers=self.headers,
-                                         json=body, timeout=90)
+                                         json=body, timeout=45)
 
                 if response.status_code in (401, 402, 403):
                     raise LLMUnavailable(

@@ -79,7 +79,9 @@
   },
   "cadence": {
     "default_interval_minutes": 75,
-    "note": "Sector narratives do not turn over in half an hour. A wider interval preserves signal and conserves the metered model budget across a multi-day run."
+    "note": "Sector narratives do not turn over in half an hour. A wider interval preserves signal and conserves the metered model budget across a multi-day run.",
+    "cycle_budget_seconds": 480,
+    "cycle_budget_note": "Wall clock budget for the thesis stage. Position review, guards and exits run before this and are never skipped. When the budget is reached the cycle stops calling the model and proceeds with the sectors it has, so a slow inference provider cannot push the run past the scheduler's execution time limit and get it killed mid-flight."
   },
   "protections": {
     "_comment": "Time bounded trading locks. Each returns a lock with an expiry and a stated reason rather than a bare boolean, so the log says what stopped trading and until when. Locks halt entries only; exits always continue.",

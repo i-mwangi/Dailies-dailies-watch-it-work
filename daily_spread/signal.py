@@ -1,4 +1,5 @@
 import json
+import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -137,10 +138,13 @@ class ThesisEngine:
         )
 
     def analyse_all(self, buckets: Dict[str, List[Article]],
-                    memory_notes: Optional[Dict[str, str]] = None) -> List[Thesis]:
+                    memory_notes: Optional[Dict[str, str]] = None,
+                    deadline: Optional[float] = None) -> List[Thesis]:
         notes = memory_notes or {}
         results = []
         for sector, articles in buckets.items():
+            if deadline is not None and time.monotonic() > deadline:
+                break
             thesis = self.analyse(sector, articles, notes.get(sector, ""))
             if thesis:
                 results.append(thesis)
