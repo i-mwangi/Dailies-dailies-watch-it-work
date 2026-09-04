@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Live console for an autonomous options trading agent on Alpaca paper trading.">
+<title>Dailies Agent Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --paper:#f4f6f7; --surface:#fff; --sunken:#eaeef0; --ink:#101a20; --body:#2c3b44;
+  --muted:#5f7280; --hair:#d3dce0; --accent:#0d6b6b; --accent-soft:#d9ecea;
+  --flag:#9a5216; --flag-soft:#f6e8db; --pos:#1d6b46; --neg:#97341f;
+  --shadow:0 1px 2px rgba(16,26,32,.05), 0 8px 24px -18px rgba(16,26,32,.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#0c1317; --surface:#121b21; --sunken:#0a1014; --ink:#e8eef1; --body:#b9c8d0;
+    --muted:#8497a2; --hair:#24333c; --accent:#5fbdb6; --accent-soft:#10312f;
+    --flag:#d99456; --flag-soft:#2c1f13; --pos:#62b98a; --neg:#dd8067;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#0c1317; --surface:#121b21; --sunken:#0a1014; --ink:#e8eef1; --body:#b9c8d0;
+  --muted:#8497a2; --hair:#24333c; --accent:#5fbdb6; --accent-soft:#10312f;
+  --flag:#d99456; --flag-soft:#2c1f13; --pos:#62b98a; --neg:#dd8067;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -18px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--body);
+  font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:74rem;margin:0 auto;padding:clamp(1.6rem,4vw,3rem) clamp(1rem,3vw,2rem) 4rem}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);font-weight:500}
+h1{font-family:Newsreader,Georgia,serif;font-weight:500;font-size:clamp(1.9rem,5vw,2.9rem);
+  line-height:1.05;color:var(--ink);margin:.4rem 0 0;letter-spacing:-.01em}
+h2{font-family:Newsreader,Georgia,serif;font-weight:500;font-size:1.45rem;color:var(--ink);
+  margin:0 0 .2rem}
+header.top{border-bottom:2px solid var(--ink);padding-bottom:1.2rem}
+.ident{display:flex;flex-wrap:wrap;gap:.4rem 1.3rem;margin-top:.9rem;
+  font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted)}
+.ident b{color:var(--ink);font-weight:600}
+.live{display:inline-flex;align-items:center;gap:.4rem}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--pos);display:inline-block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:1px;
+  background:var(--hair);border:1px solid var(--hair);margin:1.8rem 0 0;box-shadow:var(--shadow)}
+.stat{background:var(--surface);padding:.9rem 1rem}
+.stat .k{font-family:"IBM Plex Mono",monospace;font-size:.62rem;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  font-size:1.3rem;font-weight:500;color:var(--ink);margin-top:.25rem;line-height:1.1}
+.stat .v.pos{color:var(--pos)} .stat .v.neg{color:var(--neg)}
+.stat .n{font-size:.72rem;color:var(--muted);margin-top:.1rem}
+section{margin-top:2.6rem}
+.lede{max-width:62ch;margin:.3rem 0 1.1rem;color:var(--body)}
+.book{display:grid;grid-template-columns:repeat(auto-fit,minmax(20rem,1fr));gap:1rem}
+.pos{background:var(--surface);border:1px solid var(--hair);border-top:2px solid var(--accent);
+  padding:1rem 1.1rem 1.1rem;box-shadow:var(--shadow)}
+.pos header{display:flex;align-items:baseline;justify-content:space-between;gap:.6rem;
+  flex-wrap:wrap;margin-bottom:.7rem}
+.sym{font-family:"IBM Plex Mono",monospace;font-size:1.2rem;font-weight:600;color:var(--ink)}
+.meta{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+.kind,.sector{font-family:"IBM Plex Mono",monospace;font-size:.62rem;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted)}
+.sector{color:var(--accent)}
+.pill{font-family:"IBM Plex Mono",monospace;font-size:.6rem;letter-spacing:.05em;
+  text-transform:uppercase;padding:.15rem .45rem;border-radius:2px}
+.pill.fired{background:var(--flag-soft);color:var(--flag);font-weight:600}
+.pill.open{background:var(--sunken);color:var(--muted)}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem .4rem;
+  padding:.6rem 0 .8rem;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.nums div{display:flex;flex-direction:column}
+.nums span{font-family:"IBM Plex Mono",monospace;font-size:.58rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted)}
+.nums b{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  font-size:.95rem;color:var(--ink);font-weight:500}
+.thesis{margin:.8rem 0 .5rem;font-size:.88rem;color:var(--body)}
+.risk{margin:0;font-size:.8rem;color:var(--muted)}
+.risk span{font-family:"IBM Plex Mono",monospace;font-size:.6rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--flag);margin-right:.35rem}
+.exit{background:var(--flag-soft);border-left:3px solid var(--flag);padding:1rem 1.2rem;margin:1.2rem 0}
+.exit .lab{font-family:"IBM Plex Mono",monospace;font-size:.62rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--flag);font-weight:600}
+.exit code{display:block;margin:.5rem 0;font-family:"IBM Plex Mono",monospace;font-size:.8rem;
+  color:var(--ink);overflow-x:auto;white-space:nowrap}
+.exit p{margin:0;color:var(--ink);font-size:.9rem}
+.tablewrap{overflow-x:auto;box-shadow:var(--shadow);margin-top:.8rem}
+table{width:100%;border-collapse:collapse;background:var(--surface);font-size:.84rem;min-width:34rem}
+th,td{text-align:left;padding:.5rem .8rem;border-bottom:1px solid var(--hair);vertical-align:top}
+thead th{font-family:"IBM Plex Mono",monospace;font-size:.62rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;border-bottom:1px solid var(--ink)}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  text-align:right;color:var(--ink);white-space:nowrap}
+td.num.big{font-size:1rem;font-weight:600;color:var(--accent)}
+td.lead{color:var(--ink);font-weight:500;white-space:nowrap}
+td.say{color:var(--muted);font-size:.8rem;max-width:30rem}
+.dir{font-family:"IBM Plex Mono",monospace;font-size:.62rem;letter-spacing:.05em;
+  text-transform:uppercase;padding:.12rem .4rem;border-radius:2px}
+.dir.bullish{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.dir.bearish{background:var(--flag-soft);color:var(--flag);font-weight:600}
+.dir.neutral{background:var(--sunken);color:var(--muted)}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:.6rem;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--muted)}
+.tag.acted{color:var(--pos);font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:1.6rem}
+footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--hair);
+  font-size:.74rem;color:var(--muted);max-width:62ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Autonomous options agent &middot; Alpaca paper trading</div>
+    <h1>Dailies, dailies, watch it work</h1>
+    <div class="ident">
+      <span class="live"><span class="dot"></span> mode <b>live</b></span>
+      <span>account <b>PA3QBU3CI6Q8</b></span>
+      <span>alpaca cli <b>0.0.14</b></span>
+      <span>snapshot <b>2026-09-04 03:47 UTC</b></span>
+    </div>
+  </header>
+
+  <div class="stats">
+<div class="stat"><div class="k">Equity</div><div class="v neg">$99,708.96</div><div class="n">-$291.04 from $100,000</div></div>
+<div class="stat"><div class="k">Credit collected</div><div class="v pos">$1,513.96</div><div class="n">cash $101,513.96</div></div>
+<div class="stat"><div class="k">Open mark</div><div class="v neg">-$302</div><div class="n">10 legs live</div></div>
+<div class="stat"><div class="k">Committed risk</div><div class="v ">$4,371</div><div class="n">of $9,971 cap</div></div>
+<div class="stat"><div class="k">Cycles</div><div class="v ">42</div><div class="n">910 model calls</div></div>
+<div class="stat"><div class="k">Orders filled</div><div class="v ">12</div><div class="n">11 of 145 approved</div></div>
+  </div>
+
+  <section>
+    <div class="eyebrow">Open book</div>
+    <h2>Five spreads, and the reasoning behind each</h2>
+    <p class="lede">Every position carries the thesis that created it and the risk the model
+    named at entry. Stops are scaled to the underlying's implied volatility measured when the
+    trade was opened.</p>
+    <div class="book">
+
+<article class="pos">
+  <header>
+    <div class="sym">TLT</div>
+    <div class="meta">
+      <span class="kind">call credit spread</span>
+      <span class="sector">Inflation</span>
+      <span class="pill open">no tier yet</span>
+    </div>
+  </header>
+  <div class="nums">
+    <div><span>contracts</span><b>10</b></div>
+    <div><span>credit</span><b>0.23</b></div>
+    <div><span>max loss</span><b>$770</b></div>
+    <div><span>entry IV</span><b>10.3%</b></div>
+    <div><span>stop</span><b>1.79&times;</b></div>
+    <div><span>conviction</span><b>0.70</b></div>
+  </div>
+  <p class="thesis">Rising Treasury yields and increased odds of a September rate hike suggest higher interest rates, which are typically bearish for long-term government bonds like TLT.</p>
+  <p class="risk"><span>Key risk</span> The Fed could surprise with a dovish stance, leading to a decline in yields and a rally in TLT.</p>
+</article>
+
+<article class="pos">
+  <header>
+    <div class="sym">XLE</div>
+    <div class="meta">
+      <span class="kind">put credit spread</span>
+      <span class="sector">Energy</span>
+      <span class="pill open">no tier yet</span>
+    </div>
+  </header>
+  <div class="nums">
+    <div><span>contracts</span><b>10</b></div>
+    <div><span>credit</span><b>0.30</b></div>
+    <div><span>max loss</span><b>$700</b></div>
+    <div><span>entry IV</span><b>26.6%</b></div>
+    <div><span>stop</span><b>2.15&times;</b></div>
+    <div><span>conviction</span><b>0.60</b></div>
+  </div>
+  <p class="thesis">The recent spike in Brent crude prices due to Middle East tensions and the positive performance of major energy stocks over the past five years suggest a bullish outlook for the energy sector.</p>
+  <p class="risk"><span>Key risk</span> Refining capacity constraints and potential geopolitical de-escalation could limit the upside for energy prices and stocks.</p>
+</article>
+
+<article class="pos">
+  <header>
+    <div class="sym">GLD</div>
+    <div class="meta">
+      <span class="kind">put credit spread</span>
+      <span class="sector">Commodities</span>
+      <span class="pill open">no tier yet</span>
+    </div>
+  </header>
+  <div class="nums">
+    <div><span>contracts</span><b>4</b></div>
+    <div><span>credit</span><b>1.62</b></div>
+    <div><span>max loss</span><b>$1,752</b></div>
+    <div><span>entry IV</span><b>23.1%</b></div>
+    <div><span>stop</span><b>2.07&times;</b></div>
+    <div><span>conviction</span><b>0.60</b></div>
+  </div>
+  <p class="thesis">Gold is expected to benefit from a weakening dollar and rising geopolitical tensions, particularly with Brent crude topping $92 and Middle East tanker attacks. Additionally, the correlation between Bitcoin and gold suggests a potential rally in gold prices.</p>
+  <p class="risk"><span>Key risk</span> A stronger-than-expected Fed rate hike could dampen gold&#x27;s appeal as a safe haven.</p>
+</article>
+
+<article class="pos">
+  <header>
+    <div class="sym">XLF</div>
+    <div class="meta">
+      <span class="kind">put credit spread</span>
+      <span class="sector">Financials</span>
+      <span class="pill fired">tier 35% fired</span>
+    </div>
+  </header>
+  <div class="nums">
+    <div><span>contracts</span><b>7</b></div>
+    <div><span>credit</span><b>0.23</b></div>
+    <div><span>max loss</span><b>$539</b></div>
+    <div><span>entry IV</span><b>17.4%</b></div>
+    <div><span>stop</span><b>1.94&times;</b></div>
+    <div><span>conviction</span><b>0.60</b></div>
+  </div>
+  <p class="thesis">The involvement of major banks in launching a global stablecoin and the strong earnings report from Royal Bank of Canada suggest a positive outlook for the financial sector. Additionally, the upgrade of Robinhood by Morgan Stanley indicates growing interest in fintech and prediction markets.</p>
+  <p class="risk"><span>Key risk</span> Regulatory pushback against the global stablecoin initiative could delay or derail the project, impacting sentiment.</p>
+</article>
+
+<article class="pos">
+  <header>
+    <div class="sym">SPY</div>
+    <div class="meta">
+      <span class="kind">call credit spread</span>
+      <span class="sector">Stocks</span>
+      <span class="pill open">no tier yet</span>
+    </div>
+  </header>
+  <div class="nums">
+    <div><span>contracts</span><b>10</b></div>
+    <div><span>credit</span><b>0.39</b></div>
+    <div><span>max loss</span><b>$610</b></div>
+    <div><span>entry IV</span><b>10.9%</b></div>
+    <div><span>stop</span><b>1.80&times;</b></div>
+    <div><span>conviction</span><b>0.60</b></div>
+  </div>
+  <p class="thesis">Rising yields and oil prices are pressuring high-multiple software stocks and broader market sentiment, while geopolitical tensions and regulatory headwinds add to the risk-off environment.</p>
+  <p class="risk"><span>Key risk</span> A sudden easing of geopolitical tensions or a dovish shift in Fed policy could reverse the bearish trend.</p>
+</article>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Position management</div>
+    <h2>An exit it took on its own</h2>
+    <div class="exit">
+      <div class="lab">Autonomous take-profit &middot; 2026-09-03 19:53:33 UTC</div>
+      <code>XLF | take_profit | tier 0.35 | contracts 3 | profit_pct 0.3913</code>
+      <p>The position crossed 39% of credit captured, fired the 35% tier, and closed three of
+      ten contracts. No human involved, outside market hours attention.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Decision feed</div>
+    <h2>What it read, and what it did about it</h2>
+    <p class="lede">The most recent theses. Conviction below 0.55, or a neutral read, produces
+    no trade at all.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Sector</th><th>Call</th><th class="num">Conv</th><th class="num">Articles</th>
+        <th>Reasoning</th><th>Outcome</th></tr></thead>
+        <tbody>
+
+<tr>
+  <td class="lead">Stocks</td>
+  <td><span class="dir neutral">neutral</span></td>
+  <td class="num">0.30</td>
+  <td class="num">52</td>
+  <td class="say">The headlines are dominated by earnings call transcripts and performance metrics of individual stocks, which do not provide a clear directional signal for the broader market. The mixed performance of various stocks suggests a lack of consensus.</td>
+  <td><span class="tag declined">declined</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Inflation</td>
+  <td><span class="dir neutral">neutral</span></td>
+  <td class="num">0.40</td>
+  <td class="num">5</td>
+  <td class="say">The mixed signals from the Fed and economic indicators, along with company-specific inflation concerns, suggest a balanced view on inflation pressures over the next few weeks.</td>
+  <td><span class="tag declined">declined</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Commodities</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.60</td>
+  <td class="num">4</td>
+  <td class="say">Gold prices have jumped 3%, likely driven by safe-haven demand amid economic uncertainty and potential Fed rate hike concerns. The strong move suggests continued support for gold in the near term.</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Bonds</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.60</td>
+  <td class="num">5</td>
+  <td class="say">Treasury yields retreated from three-year highs after Fed Governor Waller signaled a potential rate hold, which is supportive for bond prices. This, combined with the positive impact of falling yields on stocks like Bloom Energy, suggests a near-term bullish o</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Technology</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.70</td>
+  <td class="num">9</td>
+  <td class="say">The technology sector is poised for gains due to significant AI-related developments, including Nvidia&#x27;s acquisition of Hugging Face and strong chip demand forecasts from Broadcom. Positive sentiment is further bolstered by a potential Fed rate hold, which cou</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Stocks</td>
+  <td><span class="dir neutral">neutral</span></td>
+  <td class="num">0.30</td>
+  <td class="num">56</td>
+  <td class="say">The headlines are dominated by earnings call transcripts and long-term performance metrics of individual stocks, which do not provide a clear directional signal for the broader market. The mixed performance of these stocks suggests a lack of strong evidence fo</td>
+  <td><span class="tag declined">declined</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Commodities</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.60</td>
+  <td class="num">4</td>
+  <td class="say">Gold prices have jumped 3%, indicating a flight to safety and potential weakening of the dollar, which is supportive for commodities. The mixed signals on the Fed&#x27;s rate hike decision add uncertainty, further boosting gold as a hedge.</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Bonds</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.60</td>
+  <td class="num">5</td>
+  <td class="say">Treasury yields retreated following Fed Governor Waller&#x27;s hint at a potential rate hold, which is supportive for bond prices. The upcoming jobs report will be crucial, but current sentiment suggests a dovish Fed stance.</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Technology</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.70</td>
+  <td class="num">10</td>
+  <td class="say">The technology sector is showing strong momentum driven by significant AI-related deals and robust chip demand. Nvidia&#x27;s acquisition of Hugging Face and Broadcom&#x27;s strong AI revenue growth highlight the sector&#x27;s positive trajectory.</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Stocks</td>
+  <td><span class="dir neutral">neutral</span></td>
+  <td class="num">0.30</td>
+  <td class="num">56</td>
+  <td class="say">The headlines are primarily focused on individual company earnings and long-term performance, which do not provide strong evidence for a directional move in the broader market sector.</td>
+  <td><span class="tag declined">declined</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Commodities</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.60</td>
+  <td class="num">4</td>
+  <td class="say">Gold prices have jumped 3%, indicating a flight to safety and potential weakening of the dollar, which is supportive for commodities overall.</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Bonds</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.60</td>
+  <td class="num">5</td>
+  <td class="say">Treasury yields retreated following Fed Governor Waller&#x27;s hint at a potential rate hold, which is supportive for bond prices. The market&#x27;s reaction suggests a shift towards a more dovish Fed stance.</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Technology</td>
+  <td><span class="dir bullish">bullish</span></td>
+  <td class="num">0.70</td>
+  <td class="num">10</td>
+  <td class="say">The technology sector is showing strong momentum driven by significant AI-related acquisitions and robust chip demand, which are key growth drivers. Positive sentiment is further bolstered by hints of a Fed rate hold.</td>
+  <td><span class="tag acted">acted</span></td>
+</tr>
+
+<tr>
+  <td class="lead">Stocks</td>
+  <td><span class="dir neutral">neutral</span></td>
+  <td class="num">0.30</td>
+  <td class="num">57</td>
+  <td class="say">The headlines are dominated by earnings call transcripts and long-term performance metrics of individual stocks, which do not provide a clear directional signal for the broader market. The mixed performance of these stocks suggests a lack of strong sentiment.</td>
+  <td><span class="tag declined">declined</span></td>
+</tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section style="margin-top:2.6rem">
+      <div class="eyebrow">Discipline</div>
+      <h2>Why trades were refused</h2>
+      <div class="tablewrap">
+        <table style="min-width:0">
+          <thead><tr><th class="num">Count</th><th>Reason</th></tr></thead>
+          <tbody>
+<tr><td class="num big">36</td><td>direction neutral is not tradeable; conviction 0.40 below fl</td></tr>
+<tr><td class="num big">25</td><td>no spread cleared construction filters</td></tr>
+<tr><td class="num big">19</td><td>direction neutral is not tradeable; conviction 0.30 below fl</td></tr>
+<tr><td class="num big">10</td><td>position cap 5 reached; already holding TLT</td></tr>
+<tr><td class="num big">9</td><td>already holding TLT</td></tr>
+<tr><td class="num big">7</td><td>position cap 5 reached; already holding XLE</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section style="margin-top:2.6rem">
+      <div class="eyebrow">Measurement</div>
+      <h2>Tested, not assumed</h2>
+      <div class="tablewrap">
+        <table style="min-width:0">
+          <thead><tr><th></th><th class="num">Hit</th><th class="num">Baseline</th><th class="num">Edge</th></tr></thead>
+          <tbody>
+            <tr><td class="lead">Raw signal</td><td class="num">0.477</td><td class="num">0.584</td>
+                <td class="num" style="color:var(--neg)">&minus;0.108</td></tr>
+            <tr><td class="lead">With memory</td><td class="num">0.516</td><td class="num">0.538</td>
+                <td class="num" style="color:var(--pos)">&minus;0.023</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="lede" style="margin-top:.9rem;font-size:.86rem">Scored against an always-long
+      baseline, because sector ETFs drift upward. The raw signal underperformed by 11 points.
+      Outcome memory closed the gap to 2 and turned mean return positive, but did not close it.</p>
+    </section>
+  </div>
+
+  <footer>
+    Snapshot of a live paper-trading account, generated 2026-09-04 03:47 UTC. Figures move as
+    the agent runs; the account number above is the source of truth. Paper trading results are
+    hypothetical and are not indicative of future results. Options carry risk, including loss of
+    principal. This is not investment advice.
+  </footer>
+</div>
+</body>
+</html>
